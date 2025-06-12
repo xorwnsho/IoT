@@ -1,15 +1,22 @@
+import RPi.GPIO as GPIO
 import time
 import random
-from gpiozero import Button, Buzzer
-from signal import pause
 
-# GPIO Pin Setup
-start_button = Button(17)  # GPIO17 for Start Button
-reaction_button = Button(17)  # Same button used for reaction
-buzzer = Buzzer(18)  # GPIO18 for Buzzer
+# GPIO setup
+BUTTON_PIN = 17
+BUZZER_PIN = 18
 
-# Reaction Time Test
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+GPIO.setup(BUZZER_PIN, GPIO.OUT)
+
 reaction_times = []
+
+def wait_for_button_press():
+    while GPIO.input(BUTTON_PIN) == GPIO.HIGH:
+        time.sleep(0.01)
+    while GPIO.input(BUTTON_PIN) == GPIO.LOW:
+        time.sleep(0.01)
 
 def run_test():
     print("Start the drowsy driving test.")
@@ -23,14 +30,13 @@ def run_test():
         time.sleep(wait_time)
         
         print("Buzzer ON! React now!")
-        buzzer.on()
+        GPIO.output(BUZZER_PIN, GPIO.HIGH)
         start_time = time.time()
         
-        # Wait for button press
-        reaction_button.wait_for_press()
-        end_time = time.time()
+        wait_for_button_press()
         
-        buzzer.off()
+        end_time = time.time()
+        GPIO.output(BUZZER_PIN, GPIO.LOW)
         
         reaction_time = end_time - start_time
         reaction_times.append(reaction_time)
@@ -47,10 +53,16 @@ def run_test():
     else:
         print("It's not drowsy driving yet.")
 
-# Main Loop
-print("Press the button to start the drowsy driving test.")
+# Main loop
+try:
+    print("Press the button to start the drowsy driving test.")
+    while True:
+        wait_for_button_press()
+        run_test()
 
-while True:
-    start_button.wait_for_press()
-    run_test()
+except KeyboardInterrupt:
+    print("Exiting program.")
+
+finally:
+    GPIO.cleanup()
 
